@@ -2,6 +2,28 @@
 
 Native macOS utility for switching Codex work environments without manually renaming files.
 
+## Why This Exists
+
+Codex stores its active local settings in `~/.codex/config.toml` and its active
+authentication state in `~/.codex/auth.json`. When you use Codex across multiple
+work environments, switching contexts can turn into a manual rename-and-restore
+routine that is easy to get wrong.
+
+Codex Config Switcher was built to make that workflow safer and faster. It keeps
+named environment profiles on disk, lets you activate one from a small native
+macOS app, and backs up the current active files before each switch.
+
+## How It Works
+
+The app scans `~/.codex` for saved profiles, shows them in a simple picker, and
+copies the selected profile's files into the active Codex locations. It does not
+store credentials inside the app bundle or publish any profile data to the repo;
+all config and auth files stay local on the machine running the app.
+
+You can also save the currently active Codex setup as a new named profile. New
+profiles are written to `~/.codex/profiles/<profile-name>/`, which keeps each
+environment's `config.toml` and `auth.json` together.
+
 ## What It Switches
 
 - Active config: `~/.codex/config.toml`
