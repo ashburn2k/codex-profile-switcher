@@ -1,0 +1,31 @@
+name: CodexConfigSwitcher
+options:
+  bundleIdPrefix: app.codexconfigswitcher
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+targets:
+  CodexConfigSwitcher:
+    type: application
+    platform: macOS
+    sources:
+      - CodexConfigSwitcher
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.codexconfigswitcher.CodexConfigSwitcher
+        PRODUCT_NAME: CodexConfigSwitcher
+        INFOPLIST_FILE: CodexConfigSwitcher/Info.plist
+        ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+        ENABLE_HARDENED_RUNTIME: "NO"
+        CODE_SIGN_ENTITLEMENTS: ""
+schemes:
+  CodexConfigSwitcher:
+    build:
+      targets:
+        CodexConfigSwitcher: all
+    run:
+      config: Debug
