@@ -60,7 +60,7 @@ struct ContentView: View {
                 .padding(14)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 280)
+        .navigationSplitViewColumnWidth(min: 205, ideal: 220, max: 250)
     }
 
     private var savePanel: some View {
@@ -115,7 +115,7 @@ struct ContentView: View {
                     }
                 }
                 .padding(18)
-                .frame(maxWidth: 900, alignment: .leading)
+                .frame(maxWidth: 820, alignment: .leading)
             }
             .background(Color(nsColor: .textBackgroundColor))
         } else {
