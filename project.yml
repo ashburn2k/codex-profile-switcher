@@ -19,6 +19,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: app.codexconfigswitcher.CodexConfigSwitcher
         PRODUCT_NAME: CodexConfigSwitcher
         INFOPLIST_FILE: CodexConfigSwitcher/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_USER_SCRIPT_SANDBOXING: "NO"
         ENABLE_HARDENED_RUNTIME: "NO"
         CODE_SIGN_ENTITLEMENTS: ""
