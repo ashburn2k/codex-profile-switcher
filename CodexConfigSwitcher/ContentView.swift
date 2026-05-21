@@ -4,23 +4,32 @@ struct ContentView: View {
     @EnvironmentObject private var store: ProfileStore
     @State private var selectedProfile: CodexProfile?
 
+    private let sidebarWidth: CGFloat = 206
+    private let detailWidth: CGFloat = 558
+    private let panelHeight: CGFloat = 344
+
     private var profileCountText: String {
         "\(store.profiles.count) profile\(store.profiles.count == 1 ? "" : "s")"
     }
 
     private var profileListHeight: CGFloat {
-        let headerAndPadding: CGFloat = 8
-        let rowHeight: CGFloat = 43
+        let headerAndPadding: CGFloat = 6
+        let rowHeight: CGFloat = 42
         let count = CGFloat(min(max(store.profiles.count, 1), 6))
         return headerAndPadding + rowHeight * count
     }
 
     var body: some View {
-        NavigationSplitView {
+        HStack(alignment: .top, spacing: 10) {
             sidebar
-        } detail: {
+                .frame(width: sidebarWidth)
+
             detail
+                .frame(width: detailWidth)
         }
+        .padding(10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(AppBackdrop())
         .toolbar {
             ToolbarItemGroup {
                 Button {
@@ -49,7 +58,7 @@ struct ContentView: View {
     private var sidebar: some View {
         VStack(spacing: 0) {
             SidebarHeader(profileCountText: profileCountText)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
                 .padding(.top, 10)
                 .padding(.bottom, 6)
 
@@ -59,22 +68,21 @@ struct ContentView: View {
             Divider()
 
             sidebarFooter
-                .padding(.horizontal, 10)
-                .padding(.top, 8)
-
-            Spacer(minLength: 0)
+                .padding(10)
         }
-        .navigationSplitViewColumnWidth(min: 200, ideal: 210, max: 220)
+        .frame(height: panelHeight, alignment: .top)
+        .switcherGlassPanel(material: .thinMaterial, isInteractive: false)
     }
 
     private var profileList: some View {
         List(store.profiles, selection: $selectedProfile) { profile in
             ProfileRow(profile: profile)
                 .tag(profile)
-                .padding(.vertical, 3)
+                .padding(.vertical, 2)
         }
-        .listStyle(.sidebar)
-        .navigationTitle("Profiles")
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(.clear)
         .scrollDisabled(store.profiles.count <= 6)
     }
 
@@ -87,8 +95,6 @@ struct ContentView: View {
                 SidebarStatus(message: store.statusMessage)
             }
         }
-        .padding(10)
-        .switcherGlassPanel(material: .ultraThinMaterial)
     }
 
     private var savePanel: some View {
@@ -99,7 +105,7 @@ struct ContentView: View {
             TextField("New profile name", text: $store.newProfileName)
                 .textFieldStyle(.roundedBorder)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Toggle("config.toml", isOn: $store.includeConfig)
                 Toggle("auth.json", isOn: $store.includeAuth)
             }
@@ -121,12 +127,7 @@ struct ContentView: View {
     @ViewBuilder
     private var detail: some View {
         if let selectedProfile {
-            VStack(alignment: .leading, spacing: 0) {
-                detailPanel(for: selectedProfile)
-            }
-            .padding(10)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(Color(nsColor: .windowBackgroundColor))
+            detailPanel(for: selectedProfile)
         } else {
             emptyState
         }
@@ -163,18 +164,18 @@ struct ContentView: View {
             switchSection(for: profile)
         }
         .padding(12)
-        .frame(maxWidth: 560, alignment: .leading)
-        .switcherGlassPanel(material: .regularMaterial)
-        .shadow(color: Color.black.opacity(0.05), radius: 12, y: 4)
+        .frame(maxWidth: .infinity, minHeight: panelHeight, alignment: .topLeading)
+        .switcherGlassPanel(material: .regularMaterial, isInteractive: true)
+        .shadow(color: Color.black.opacity(0.08), radius: 14, y: 5)
     }
 
     private func profileSummary(for profile: CodexProfile) -> some View {
         HStack(alignment: .center, spacing: 10) {
-            ProfileIcon(profile: profile, size: 46)
+            ProfileIcon(profile: profile, size: 44)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(profile.name)
-                    .font(.largeTitle.bold())
+                    .font(.title.bold())
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
@@ -254,7 +255,40 @@ struct ContentView: View {
         )
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .switcherGlassPanel(material: .regularMaterial, isInteractive: false)
+    }
+}
+
+private struct AppBackdrop: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(nsColor: .windowBackgroundColor),
+                    Color.accentColor.opacity(0.10),
+                    Color.white.opacity(0.42)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            GlassSheen()
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct GlassSheen: View {
+    var body: some View {
+        Canvas { context, size in
+            let leftRect = CGRect(x: -size.width * 0.06, y: size.height * 0.18, width: size.width * 0.42, height: size.height * 0.78)
+            let rightRect = CGRect(x: size.width * 0.54, y: -size.height * 0.18, width: size.width * 0.56, height: size.height * 0.72)
+
+            context.fill(Path(ellipseIn: leftRect), with: .color(Color.blue.opacity(0.10)))
+            context.fill(Path(ellipseIn: rightRect), with: .color(Color.cyan.opacity(0.10)))
+        }
+        .blur(radius: 32)
+        .allowsHitTesting(false)
     }
 }
 
@@ -271,7 +305,7 @@ private struct SidebarHeader: View {
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(Color.accentColor)
             }
-            .frame(width: 42, height: 42)
+            .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Codex Switcher")
@@ -293,7 +327,7 @@ private struct ProfileRow: View {
 
     var body: some View {
         HStack(spacing: 9) {
-            ProfileIcon(profile: profile, size: 32)
+            ProfileIcon(profile: profile, size: 30)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(profile.name)
@@ -323,7 +357,7 @@ private struct ProfileIcon: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 8)
-                .fill(tint.opacity(0.14))
+                .fill(tint.opacity(0.16))
 
             Image(systemName: profile.source == .folder ? "folder.fill" : "doc.on.doc.fill")
                 .font(.system(size: size * 0.44, weight: .semibold))
@@ -341,7 +375,7 @@ private struct InlineMetric: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             SectionTitle(title, systemImage: systemImage, tint: tint)
 
             Text(value)
@@ -368,7 +402,7 @@ private struct SectionTitle: View {
     var body: some View {
         Label {
             Text(title)
-                .font(.title3.weight(.semibold))
+                .font(.headline.weight(.semibold))
         } icon: {
             Image(systemName: systemImage)
                 .foregroundStyle(tint)
@@ -455,7 +489,7 @@ private struct PathText: View {
 private struct PanelDivider: View {
     var body: some View {
         Divider()
-            .padding(.vertical, 7)
+            .padding(.vertical, 6)
     }
 }
 
@@ -475,7 +509,7 @@ private struct SidebarStatus: View {
             Text(message)
                 .font(.callout)
                 .foregroundStyle(.secondary)
-                .lineLimit(3)
+                .lineLimit(2)
                 .textSelection(.enabled)
         }
     }
@@ -525,15 +559,25 @@ private enum StatusTone {
 
 private struct SwitcherGlassPanel: ViewModifier {
     let material: Material
+    let isInteractive: Bool
 
     func body(content: Content) -> some View {
         if #available(macOS 26.0, *) {
-            content
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color.primary.opacity(0.08))
-                }
+            if isInteractive {
+                content
+                    .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.white.opacity(0.28))
+                    }
+            } else {
+                content
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.white.opacity(0.24))
+                    }
+            }
         } else {
             content
                 .background(material, in: RoundedRectangle(cornerRadius: 8))
@@ -546,7 +590,7 @@ private struct SwitcherGlassPanel: ViewModifier {
 }
 
 private extension View {
-    func switcherGlassPanel(material: Material) -> some View {
-        modifier(SwitcherGlassPanel(material: material))
+    func switcherGlassPanel(material: Material, isInteractive: Bool) -> some View {
+        modifier(SwitcherGlassPanel(material: material, isInteractive: isInteractive))
     }
 }
