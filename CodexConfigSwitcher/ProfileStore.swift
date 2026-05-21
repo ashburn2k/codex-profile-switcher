@@ -17,6 +17,22 @@ final class ProfileStore: ObservableObject {
     private let codexURL: URL
     private let profilesURL: URL
     private let backupsURL: URL
+    private static let fileSizeFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter
+    }()
+    private static let fileDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+    private static let backupTimestampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
+        return formatter
+    }()
 
     init() {
         let home = fileManager.homeDirectoryForCurrentUser
@@ -302,19 +318,17 @@ final class ProfileStore: ObservableObject {
 
         let size = attributes[.size] as? NSNumber
         let modified = attributes[.modificationDate] as? Date
-        let byteCount = ByteCountFormatter.string(fromByteCount: size?.int64Value ?? 0, countStyle: .file)
+        let byteCount = Self.fileSizeFormatter.string(fromByteCount: size?.int64Value ?? 0)
 
         if let modified {
-            return "\(byteCount), \(modified.formatted(date: .abbreviated, time: .shortened))"
+            return "\(byteCount), \(Self.fileDateFormatter.string(from: modified))"
         }
 
         return byteCount
     }
 
     private func timestamp() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
-        return formatter.string(from: Date())
+        Self.backupTimestampFormatter.string(from: Date())
     }
 
     private func sanitizedProfileName(_ value: String) -> String {

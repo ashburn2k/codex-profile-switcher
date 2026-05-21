@@ -44,34 +44,50 @@ struct ContentView: View {
             SidebarHeader(profileCountText: profileCountText)
                 .padding(.horizontal, 14)
                 .padding(.top, 14)
-                .padding(.bottom, 10)
+                .padding(.bottom, 8)
 
             List(store.profiles, selection: $selectedProfile) { profile in
                 ProfileRow(profile: profile)
                     .tag(profile)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 3)
             }
             .listStyle(.sidebar)
             .navigationTitle("Profiles")
 
             Divider()
 
-            savePanel
-                .padding(14)
+            sidebarFooter
+                .padding(12)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
-        .navigationSplitViewColumnWidth(min: 205, ideal: 220, max: 250)
+        .navigationSplitViewColumnWidth(min: 200, ideal: 210, max: 220)
+    }
+
+    private var sidebarFooter: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            savePanel
+
+            if !store.statusMessage.isEmpty {
+                Divider()
+                SidebarStatus(message: store.statusMessage)
+            }
+        }
+        .padding(12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.primary.opacity(0.08))
+        }
     }
 
     private var savePanel: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Label("Save Current Setup", systemImage: "plus.circle.fill")
                 .font(.body.weight(.semibold))
 
             TextField("New profile name", text: $store.newProfileName)
                 .textFieldStyle(.roundedBorder)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Toggle("config.toml", isOn: $store.includeConfig)
                 Toggle("auth.json", isOn: $store.includeAuth)
             }
@@ -85,131 +101,121 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
             .disabled(store.newProfileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        }
-        .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(0.08))
         }
     }
 
     @ViewBuilder
     private var detail: some View {
         if let selectedProfile {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    profileHeader(for: selectedProfile)
-
-                    HStack(alignment: .top, spacing: 12) {
-                        activeFilesCard
-                        sourceCard(for: selectedProfile)
-                    }
-
-                    fileCard(for: selectedProfile)
-                    switchCard(for: selectedProfile)
-
-                    if !store.statusMessage.isEmpty {
-                        StatusBanner(message: store.statusMessage)
-                    }
-                }
-                .padding(18)
-                .frame(maxWidth: 820, alignment: .leading)
+            VStack(alignment: .leading, spacing: 0) {
+                detailPanel(for: selectedProfile)
             }
-            .background(Color(nsColor: .textBackgroundColor))
+            .padding(14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Color(nsColor: .windowBackgroundColor))
         } else {
             emptyState
         }
     }
 
-    private func profileHeader(for profile: CodexProfile) -> some View {
-        HStack(alignment: .center, spacing: 14) {
-            ProfileIcon(profile: profile, size: 54)
+    private func detailPanel(for profile: CodexProfile) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            profileSummary(for: profile)
 
-            VStack(alignment: .leading, spacing: 6) {
+            PanelDivider()
+
+            HStack(alignment: .top, spacing: 16) {
+                InlineMetric(
+                    title: "Active Files",
+                    value: store.activeSummary,
+                    systemImage: "checkmark.shield",
+                    tint: .green
+                )
+
+                InlineMetric(
+                    title: "Profile Source",
+                    value: profile.source == .folder ? "Folder profile" : "Loose ~/.codex files",
+                    systemImage: profile.source == .folder ? "folder" : "doc.on.doc",
+                    tint: .blue
+                )
+            }
+
+            PanelDivider()
+
+            fileSection(for: profile)
+
+            PanelDivider()
+
+            switchSection(for: profile)
+        }
+        .padding(14)
+        .frame(maxWidth: 560, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.primary.opacity(0.08))
+        }
+        .shadow(color: Color.black.opacity(0.05), radius: 12, y: 4)
+    }
+
+    private func profileSummary(for profile: CodexProfile) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            ProfileIcon(profile: profile, size: 50)
+
+            VStack(alignment: .leading, spacing: 5) {
                 Text(profile.name)
                     .font(.largeTitle.bold())
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.75)
 
                 Text(profile.detail)
                     .font(.body)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .truncationMode(.middle)
                     .textSelection(.enabled)
 
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ProfileBadge(text: "config", systemImage: "doc.text", isActive: profile.hasConfig)
                     ProfileBadge(text: "auth", systemImage: "key", isActive: profile.hasAuth)
                 }
             }
 
-            Spacer(minLength: 16)
+            Spacer(minLength: 10)
 
             Button {
                 store.revealProfile(profile)
             } label: {
                 Label("Reveal", systemImage: "magnifyingglass")
             }
-            .controlSize(.large)
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(0.08))
+            .controlSize(.regular)
+            .buttonBorderShape(.capsule)
         }
     }
 
-    private var activeFilesCard: some View {
-        SummaryCard(
-            title: "Active Files",
-            subtitle: store.activeSummary,
-            systemImage: "checkmark.shield",
-            tint: .green
-        )
-    }
-
-    private func sourceCard(for profile: CodexProfile) -> some View {
-        SummaryCard(
-            title: "Profile Source",
-            subtitle: profile.source == .folder ? "Folder profile" : "Loose ~/.codex files",
-            systemImage: profile.source == .folder ? "folder" : "doc.on.doc",
-            tint: .blue
-        )
-    }
-
-    private func fileCard(for profile: CodexProfile) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private func fileSection(for profile: CodexProfile) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
             SectionTitle("Profile Files", systemImage: "tray.full")
 
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 FileRow(title: "config.toml", systemImage: "doc.text", url: profile.configURL)
                 Divider()
                 FileRow(title: "auth.json", systemImage: "key", url: profile.authURL)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(0.08))
-        }
     }
 
-    private func switchCard(for profile: CodexProfile) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func switchSection(for profile: CodexProfile) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
             SectionTitle("Switch Profile", systemImage: "arrow.triangle.2.circlepath")
 
             Toggle("Relaunch Codex after switch", isOn: $store.relaunchCodexAfterSwitch)
                 .toggleStyle(.switch)
                 .font(.body)
 
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Button {
                     store.switchToProfile(profile)
                 } label: {
@@ -217,25 +223,18 @@ struct ContentView: View {
                         store.relaunchCodexAfterSwitch ? "Switch and Relaunch Codex" : "Switch to This Profile",
                         systemImage: store.relaunchCodexAfterSwitch ? "arrow.clockwise.circle" : "arrow.triangle.2.circlepath"
                     )
-                    .frame(minWidth: 220)
+                    .frame(minWidth: 210)
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonBorderShape(.capsule)
 
                 Button {
                     store.revealProfile(profile)
                 } label: {
                     Label("Reveal Profile", systemImage: "folder")
                 }
-                .controlSize(.large)
+                .buttonBorderShape(.capsule)
             }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(0.08))
         }
     }
 
@@ -247,7 +246,7 @@ struct ContentView: View {
         )
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .textBackgroundColor))
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 }
 
@@ -255,7 +254,7 @@ private struct SidebarHeader: View {
     let profileCountText: String
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.accentColor.opacity(0.14))
@@ -285,15 +284,15 @@ private struct ProfileRow: View {
     let profile: CodexProfile
 
     var body: some View {
-        HStack(spacing: 10) {
-            ProfileIcon(profile: profile, size: 34)
+        HStack(spacing: 9) {
+            ProfileIcon(profile: profile, size: 32)
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(profile.name)
                     .font(.body.weight(.semibold))
                     .lineLimit(1)
 
-                HStack(spacing: 8) {
+                HStack(spacing: 7) {
                     AvailabilityDot(isActive: profile.hasConfig, label: "config")
                     AvailabilityDot(isActive: profile.hasAuth, label: "auth")
                 }
@@ -327,30 +326,23 @@ private struct ProfileIcon: View {
     }
 }
 
-private struct SummaryCard: View {
+private struct InlineMetric: View {
     let title: String
-    let subtitle: String
+    let value: String
     let systemImage: String
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             SectionTitle(title, systemImage: systemImage, tint: tint)
 
-            Text(subtitle)
-                .font(.system(.body, design: .rounded))
+            Text(value)
+                .font(.body)
                 .foregroundStyle(.secondary)
-                .lineLimit(3)
+                .lineLimit(2)
                 .textSelection(.enabled)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(0.08))
-        }
     }
 }
 
@@ -382,15 +374,15 @@ private struct FileRow: View {
     let url: URL?
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: systemImage)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(url == nil ? Color.secondary : Color.accentColor)
-                .frame(width: 20)
+                .frame(width: 18)
 
             Text(title)
                 .font(.body.weight(.semibold))
-                .frame(width: 106, alignment: .leading)
+                .frame(width: 104, alignment: .leading)
 
             PathText(url: url)
 
@@ -408,7 +400,7 @@ private struct ProfileBadge: View {
         Label(text, systemImage: isActive ? systemImage : "minus.circle")
             .font(.callout.weight(.semibold))
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.vertical, 3)
             .background(isActive ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.12))
             .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
             .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -428,6 +420,7 @@ private struct AvailabilityDot: View {
             Text(label)
                 .font(.callout)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
     }
 }
@@ -451,7 +444,14 @@ private struct PathText: View {
     }
 }
 
-private struct StatusBanner: View {
+private struct PanelDivider: View {
+    var body: some View {
+        Divider()
+            .padding(.vertical, 10)
+    }
+}
+
+private struct SidebarStatus: View {
     let message: String
 
     private var tone: StatusTone {
@@ -459,23 +459,16 @@ private struct StatusBanner: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 7) {
             Image(systemName: tone.systemImage)
-                .font(.body.weight(.semibold))
+                .font(.callout.weight(.semibold))
                 .foregroundStyle(tone.tint)
 
             Text(message)
-                .font(.body)
+                .font(.callout)
                 .foregroundStyle(.secondary)
+                .lineLimit(3)
                 .textSelection(.enabled)
-
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .background(tone.tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(tone.tint.opacity(0.18))
         }
     }
 }

@@ -11,21 +11,23 @@ struct CodexConfigSwitcherApp: App {
                 .environmentObject(store)
                 .frame(
                     minWidth: 800,
-                    idealWidth: 830,
-                    minHeight: 500,
-                    idealHeight: 540
+                    idealWidth: 800,
+                    maxWidth: 800,
+                    minHeight: 520,
+                    idealHeight: 520,
+                    maxHeight: 520
                 )
-                .background(WindowInitialSize(size: NSSize(width: 830, height: 540)))
+                .background(FixedWindowSize(size: NSSize(width: 800, height: 520)))
         }
         .windowStyle(.titleBar)
-        .defaultSize(width: 830, height: 540)
+        .defaultSize(width: 800, height: 520)
         .commands {
             CommandGroup(replacing: .newItem) { }
         }
     }
 }
 
-private struct WindowInitialSize: NSViewRepresentable {
+private struct FixedWindowSize: NSViewRepresentable {
     let size: NSSize
 
     func makeCoordinator() -> Coordinator {
@@ -46,6 +48,10 @@ private struct WindowInitialSize: NSViewRepresentable {
         DispatchQueue.main.async {
             guard !coordinator.didApply, let window = view.window else { return }
             coordinator.didApply = true
+            let lockedFrameSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: size)).size
+            window.minSize = lockedFrameSize
+            window.maxSize = lockedFrameSize
+            window.styleMask.remove(.resizable)
             window.setContentSize(size)
             window.center()
         }
