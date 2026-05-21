@@ -8,6 +8,13 @@ struct ContentView: View {
         "\(store.profiles.count) profile\(store.profiles.count == 1 ? "" : "s")"
     }
 
+    private var profileListHeight: CGFloat {
+        let headerAndPadding: CGFloat = 8
+        let rowHeight: CGFloat = 43
+        let count = CGFloat(min(max(store.profiles.count, 1), 6))
+        return headerAndPadding + rowHeight * count
+    }
+
     var body: some View {
         NavigationSplitView {
             sidebar
@@ -42,28 +49,37 @@ struct ContentView: View {
     private var sidebar: some View {
         VStack(spacing: 0) {
             SidebarHeader(profileCountText: profileCountText)
-                .padding(.horizontal, 14)
-                .padding(.top, 14)
-                .padding(.bottom, 8)
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
 
-            List(store.profiles, selection: $selectedProfile) { profile in
-                ProfileRow(profile: profile)
-                    .tag(profile)
-                    .padding(.vertical, 3)
-            }
-            .listStyle(.sidebar)
-            .navigationTitle("Profiles")
+            profileList
+                .frame(height: profileListHeight)
 
             Divider()
 
             sidebarFooter
-                .padding(12)
+                .padding(.horizontal, 10)
+                .padding(.top, 8)
+
+            Spacer(minLength: 0)
         }
         .navigationSplitViewColumnWidth(min: 200, ideal: 210, max: 220)
     }
 
+    private var profileList: some View {
+        List(store.profiles, selection: $selectedProfile) { profile in
+            ProfileRow(profile: profile)
+                .tag(profile)
+                .padding(.vertical, 3)
+        }
+        .listStyle(.sidebar)
+        .navigationTitle("Profiles")
+        .scrollDisabled(store.profiles.count <= 6)
+    }
+
     private var sidebarFooter: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             savePanel
 
             if !store.statusMessage.isEmpty {
@@ -71,16 +87,12 @@ struct ContentView: View {
                 SidebarStatus(message: store.statusMessage)
             }
         }
-        .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(0.08))
-        }
+        .padding(10)
+        .switcherGlassPanel(material: .ultraThinMaterial)
     }
 
     private var savePanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Label("Save Current Setup", systemImage: "plus.circle.fill")
                 .font(.body.weight(.semibold))
 
@@ -112,7 +124,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 0) {
                 detailPanel(for: selectedProfile)
             }
-            .padding(14)
+            .padding(10)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(Color(nsColor: .windowBackgroundColor))
         } else {
@@ -150,21 +162,17 @@ struct ContentView: View {
 
             switchSection(for: profile)
         }
-        .padding(14)
+        .padding(12)
         .frame(maxWidth: 560, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.primary.opacity(0.08))
-        }
+        .switcherGlassPanel(material: .regularMaterial)
         .shadow(color: Color.black.opacity(0.05), radius: 12, y: 4)
     }
 
     private func profileSummary(for profile: CodexProfile) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            ProfileIcon(profile: profile, size: 50)
+        HStack(alignment: .center, spacing: 10) {
+            ProfileIcon(profile: profile, size: 46)
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(profile.name)
                     .font(.largeTitle.bold())
                     .lineLimit(1)
@@ -196,10 +204,10 @@ struct ContentView: View {
     }
 
     private func fileSection(for profile: CodexProfile) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             SectionTitle("Profile Files", systemImage: "tray.full")
 
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 FileRow(title: "config.toml", systemImage: "doc.text", url: profile.configURL)
                 Divider()
                 FileRow(title: "auth.json", systemImage: "key", url: profile.authURL)
@@ -208,7 +216,7 @@ struct ContentView: View {
     }
 
     private func switchSection(for profile: CodexProfile) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             SectionTitle("Switch Profile", systemImage: "arrow.triangle.2.circlepath")
 
             Toggle("Relaunch Codex after switch", isOn: $store.relaunchCodexAfterSwitch)
@@ -447,7 +455,7 @@ private struct PathText: View {
 private struct PanelDivider: View {
     var body: some View {
         Divider()
-            .padding(.vertical, 10)
+            .padding(.vertical, 7)
     }
 }
 
@@ -512,5 +520,33 @@ private enum StatusTone {
         case .neutral:
             return "info.circle.fill"
         }
+    }
+}
+
+private struct SwitcherGlassPanel: ViewModifier {
+    let material: Material
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.primary.opacity(0.08))
+                }
+        } else {
+            content
+                .background(material, in: RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.primary.opacity(0.08))
+                }
+        }
+    }
+}
+
+private extension View {
+    func switcherGlassPanel(material: Material) -> some View {
+        modifier(SwitcherGlassPanel(material: material))
     }
 }

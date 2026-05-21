@@ -13,14 +13,14 @@ struct CodexConfigSwitcherApp: App {
                     minWidth: 800,
                     idealWidth: 800,
                     maxWidth: 800,
-                    minHeight: 520,
-                    idealHeight: 520,
-                    maxHeight: 520
+                    minHeight: 470,
+                    idealHeight: 470,
+                    maxHeight: 470
                 )
-                .background(FixedWindowSize(size: NSSize(width: 800, height: 520)))
+                .background(FixedWindowSize(size: NSSize(width: 800, height: 470)))
         }
         .windowStyle(.titleBar)
-        .defaultSize(width: 800, height: 520)
+        .defaultSize(width: 800, height: 470)
         .commands {
             CommandGroup(replacing: .newItem) { }
         }
