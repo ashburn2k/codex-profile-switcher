@@ -122,7 +122,10 @@ struct ContentView: View {
                     Button {
                         store.switchToProfile(selectedProfile)
                     } label: {
-                        Label("Switch to This Profile", systemImage: "arrow.triangle.2.circlepath")
+                        Label(
+                            store.relaunchCodexAfterSwitch ? "Switch and Relaunch Codex" : "Switch to This Profile",
+                            systemImage: store.relaunchCodexAfterSwitch ? "arrow.clockwise.circle" : "arrow.triangle.2.circlepath"
+                        )
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
@@ -134,6 +137,9 @@ struct ContentView: View {
                     }
                     .controlSize(.large)
                 }
+
+                Toggle("Relaunch Codex after switch", isOn: $store.relaunchCodexAfterSwitch)
+                    .toggleStyle(.switch)
 
                 Spacer()
 

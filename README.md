@@ -20,6 +20,9 @@ copies the selected profile's files into the active Codex locations. It does not
 store credentials inside the app bundle or publish any profile data to the repo;
 all config and auth files stay local on the machine running the app.
 
+When relaunch is enabled, switching profiles also quits the running Codex app and
+opens Codex again so the newly copied profile is loaded on startup.
+
 You can also save the currently active Codex setup as a new named profile. New
 profiles are written to `~/.codex/profiles/<profile-name>/`, which keeps each
 environment's `config.toml` and `auth.json` together.

@@ -1,5 +1,6 @@
+import AppKit
+import Combine
 import Foundation
-import SwiftUI
 
 @MainActor
 final class ProfileStore: ObservableObject {
@@ -9,8 +10,10 @@ final class ProfileStore: ObservableObject {
     @Published var newProfileName = ""
     @Published var includeConfig = true
     @Published var includeAuth = true
+    @Published var relaunchCodexAfterSwitch = true
 
     private let fileManager = FileManager.default
+    private let codexBundleIdentifier = "com.openai.codex"
     private let codexURL: URL
     private let profilesURL: URL
     private let backupsURL: URL
@@ -55,7 +58,16 @@ final class ProfileStore: ObservableObject {
             try install(profile.configURL, to: configURL)
             try install(profile.authURL, to: authURL)
 
-            statusMessage = "Switched to \(profile.name). Backup: \(backupFolder.lastPathComponent)"
+            if relaunchCodexAfterSwitch {
+                do {
+                    try relaunchCodex()
+                    statusMessage = "Switched to \(profile.name) and relaunched Codex. Backup: \(backupFolder.lastPathComponent)"
+                } catch {
+                    statusMessage = "Switched to \(profile.name), but Codex relaunch failed: \(error.localizedDescription). Backup: \(backupFolder.lastPathComponent)"
+                }
+            } else {
+                statusMessage = "Switched to \(profile.name). Backup: \(backupFolder.lastPathComponent)"
+            }
             refresh()
         } catch {
             statusMessage = "Switch failed: \(error.localizedDescription)"
@@ -101,6 +113,71 @@ final class ProfileStore: ObservableObject {
     func revealProfile(_ profile: CodexProfile) {
         let url = profile.folderURL ?? profile.configURL ?? profile.authURL ?? codexURL
         NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    private func relaunchCodex() throws {
+        let runningCodexApps = NSRunningApplication.runningApplications(withBundleIdentifier: codexBundleIdentifier)
+        for app in runningCodexApps where !app.isTerminated {
+            _ = app.terminate()
+        }
+
+        waitForTermination(of: runningCodexApps, timeout: 5)
+
+        let remainingCodexApps = runningCodexApps.filter { !$0.isTerminated }
+        for app in remainingCodexApps {
+            _ = app.forceTerminate()
+        }
+
+        waitForTermination(of: remainingCodexApps, timeout: 2)
+        try openCodex()
+    }
+
+    private func waitForTermination(of apps: [NSRunningApplication], timeout: TimeInterval) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline, apps.contains(where: { !$0.isTerminated }) {
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.1))
+        }
+    }
+
+    private func openCodex() throws {
+        let process = Process()
+        let standardError = Pipe()
+
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = openCodexArguments()
+        process.standardError = standardError
+
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            let data = standardError.fileHandleForReading.readDataToEndOfFile()
+            let message = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            throw ProfileStoreError.codexLaunchFailed(status: process.terminationStatus, message: message)
+        }
+    }
+
+    private func openCodexArguments() -> [String] {
+        if let codexAppURL {
+            return [codexAppURL.path]
+        }
+
+        return ["-b", codexBundleIdentifier]
+    }
+
+    private var codexAppURL: URL? {
+        let home = fileManager.homeDirectoryForCurrentUser
+        let candidates = [
+            URL(fileURLWithPath: "/Applications/Codex.app", isDirectory: true),
+            home.appendingPathComponent("Applications/Codex.app", isDirectory: true)
+        ]
+
+        if let candidate = candidates.first(where: { fileManager.fileExists(atPath: $0.path) }) {
+            return candidate
+        }
+
+        return NSWorkspace.shared.urlForApplication(withBundleIdentifier: codexBundleIdentifier)
     }
 
     private func ensureDirectories() throws {
@@ -245,5 +322,20 @@ final class ProfileStore: ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "/", with: "-")
             .replacingOccurrences(of: ":", with: "-")
+    }
+}
+
+private enum ProfileStoreError: LocalizedError {
+    case codexLaunchFailed(status: Int32, message: String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .codexLaunchFailed(status, message):
+            if message.isEmpty {
+                return "open exited with status \(status)."
+            }
+
+            return message
+        }
     }
 }
