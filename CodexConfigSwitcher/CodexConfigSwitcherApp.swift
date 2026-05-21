@@ -8,7 +8,7 @@ struct CodexConfigSwitcherApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(store)
-                .frame(minWidth: 920, minHeight: 620)
+                .frame(minWidth: 900, minHeight: 540)
         }
         .windowStyle(.titleBar)
         .commands {

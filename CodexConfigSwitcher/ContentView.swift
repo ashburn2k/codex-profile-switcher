@@ -64,19 +64,19 @@ struct ContentView: View {
     }
 
     private var savePanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Label("Save Current Setup", systemImage: "plus.circle.fill")
-                .font(.headline)
+                .font(.body.weight(.semibold))
 
             TextField("New profile name", text: $store.newProfileName)
                 .textFieldStyle(.roundedBorder)
 
-            HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
                 Toggle("config.toml", isOn: $store.includeConfig)
                 Toggle("auth.json", isOn: $store.includeAuth)
             }
             .toggleStyle(.checkbox)
-            .font(.callout)
+            .font(.body)
 
             Button {
                 store.saveCurrentAsProfile()
@@ -87,7 +87,7 @@ struct ContentView: View {
             .buttonStyle(.borderedProminent)
             .disabled(store.newProfileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
-        .padding(14)
+        .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
@@ -99,10 +99,10 @@ struct ContentView: View {
     private var detail: some View {
         if let selectedProfile {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 12) {
                     profileHeader(for: selectedProfile)
 
-                    HStack(alignment: .top, spacing: 18) {
+                    HStack(alignment: .top, spacing: 12) {
                         activeFilesCard
                         sourceCard(for: selectedProfile)
                     }
@@ -114,8 +114,8 @@ struct ContentView: View {
                         StatusBanner(message: store.statusMessage)
                     }
                 }
-                .padding(28)
-                .frame(maxWidth: 860, alignment: .leading)
+                .padding(18)
+                .frame(maxWidth: 900, alignment: .leading)
             }
             .background(Color(nsColor: .textBackgroundColor))
         } else {
@@ -124,17 +124,17 @@ struct ContentView: View {
     }
 
     private func profileHeader(for profile: CodexProfile) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            ProfileIcon(profile: profile, size: 58)
+        HStack(alignment: .center, spacing: 14) {
+            ProfileIcon(profile: profile, size: 54)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(profile.name)
                     .font(.largeTitle.bold())
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
 
                 Text(profile.detail)
-                    .font(.callout)
+                    .font(.body)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .truncationMode(.middle)
@@ -155,7 +155,8 @@ struct ContentView: View {
             }
             .controlSize(.large)
         }
-        .padding(20)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
@@ -182,16 +183,17 @@ struct ContentView: View {
     }
 
     private func fileCard(for profile: CodexProfile) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             SectionTitle("Profile Files", systemImage: "tray.full")
 
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 FileRow(title: "config.toml", systemImage: "doc.text", url: profile.configURL)
                 Divider()
                 FileRow(title: "auth.json", systemImage: "key", url: profile.authURL)
             }
         }
-        .padding(18)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
@@ -200,11 +202,12 @@ struct ContentView: View {
     }
 
     private func switchCard(for profile: CodexProfile) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             SectionTitle("Switch Profile", systemImage: "arrow.triangle.2.circlepath")
 
             Toggle("Relaunch Codex after switch", isOn: $store.relaunchCodexAfterSwitch)
                 .toggleStyle(.switch)
+                .font(.body)
 
             HStack(spacing: 12) {
                 Button {
@@ -227,7 +230,8 @@ struct ContentView: View {
                 .controlSize(.large)
             }
         }
-        .padding(18)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
@@ -264,7 +268,7 @@ private struct SidebarHeader: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Codex Switcher")
-                    .font(.headline)
+                    .font(.body.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Text(profileCountText)
@@ -286,7 +290,7 @@ private struct ProfileRow: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(profile.name)
-                    .font(.headline)
+                    .font(.body.weight(.semibold))
                     .lineLimit(1)
 
                 HStack(spacing: 8) {
@@ -330,17 +334,18 @@ private struct SummaryCard: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             SectionTitle(title, systemImage: systemImage, tint: tint)
 
             Text(subtitle)
-                .font(.system(.callout, design: .rounded))
+                .font(.system(.body, design: .rounded))
                 .foregroundStyle(.secondary)
                 .lineLimit(3)
                 .textSelection(.enabled)
         }
-        .frame(maxWidth: .infinity, minHeight: 118, alignment: .topLeading)
-        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
@@ -363,7 +368,7 @@ private struct SectionTitle: View {
     var body: some View {
         Label {
             Text(title)
-                .font(.headline)
+                .font(.title3.weight(.semibold))
         } icon: {
             Image(systemName: systemImage)
                 .foregroundStyle(tint)
@@ -384,8 +389,8 @@ private struct FileRow: View {
                 .frame(width: 20)
 
             Text(title)
-                .font(.callout.weight(.semibold))
-                .frame(width: 94, alignment: .leading)
+                .font(.body.weight(.semibold))
+                .frame(width: 106, alignment: .leading)
 
             PathText(url: url)
 
@@ -401,7 +406,7 @@ private struct ProfileBadge: View {
 
     var body: some View {
         Label(text, systemImage: isActive ? systemImage : "minus.circle")
-            .font(.caption.weight(.semibold))
+            .font(.callout.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(isActive ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.12))
@@ -421,7 +426,7 @@ private struct AvailabilityDot: View {
                 .foregroundStyle(isActive ? Color.green : Color.secondary)
 
             Text(label)
-                .font(.caption)
+                .font(.callout)
                 .foregroundStyle(.secondary)
         }
     }
@@ -433,14 +438,14 @@ private struct PathText: View {
     var body: some View {
         if let url {
             Text(url.path)
-                .font(.system(.callout, design: .monospaced))
+                .font(.system(.body, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .textSelection(.enabled)
         } else {
             Text("Not included")
-                .font(.callout)
+                .font(.body)
                 .foregroundStyle(.secondary)
         }
     }
@@ -460,13 +465,13 @@ private struct StatusBanner: View {
                 .foregroundStyle(tone.tint)
 
             Text(message)
-                .font(.callout)
+                .font(.body)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
 
             Spacer(minLength: 0)
         }
-        .padding(14)
+        .padding(12)
         .background(tone.tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
