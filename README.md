@@ -43,6 +43,17 @@ Before every switch, the app backs up the current active files to:
 
 ## Build
 
+For the local development loop, use the project run script:
+
+```sh
+./script/build_and_run.sh
+```
+
+It regenerates the Xcode project when `xcodegen` is available, builds into
+project-local `build/DerivedData`, clears generated bundle metadata that can
+break local signing, signs the cleaned app, and launches it. Optional modes:
+`--verify`, `--logs`, `--telemetry`, and `--debug`.
+
 ```sh
 xcodegen generate
 COPYFILE_DISABLE=1 /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project CodexConfigSwitcher.xcodeproj -scheme CodexConfigSwitcher -configuration Debug build
