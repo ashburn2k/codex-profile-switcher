@@ -31,15 +31,22 @@ environment's `config.toml` and `auth.json` together.
 
 - Active config: `~/.codex/config.toml`
 - Active auth: `~/.codex/auth.json`
+- Codex app settings: selected files under `~/Library/Preferences/com.openai.codex.plist`
+  and `~/Library/Application Support/Codex/`
 
 Profiles can live in either format:
 
 - Folder profiles: `~/.codex/profiles/<profile-name>/config.toml` and `auth.json`
+- Folder profiles with app settings: `~/.codex/profiles/<profile-name>/app-settings/`
 - Existing loose files: `~/.codex/config-<profile-name>.toml` and `auth-<profile-name>.json`
 
 Before every switch, the app backs up the current active files to:
 
 `~/.codex/profile-switcher-backups/<timestamp>/`
+
+When a profile includes app settings, Codex is closed before those files are
+restored so Chromium local storage, such as appearance preferences, is not
+overwritten by a running app.
 
 ## Build
 

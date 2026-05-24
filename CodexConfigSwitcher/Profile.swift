@@ -11,6 +11,7 @@ struct CodexProfile: Identifiable, Hashable {
     let source: Source
     let configURL: URL?
     let authURL: URL?
+    let appSettingsURL: URL?
     let folderURL: URL?
 
     var hasConfig: Bool {
@@ -19,6 +20,10 @@ struct CodexProfile: Identifiable, Hashable {
 
     var hasAuth: Bool {
         authURL != nil
+    }
+
+    var hasAppSettings: Bool {
+        appSettingsURL != nil
     }
 
     var detail: String {

@@ -2,6 +2,11 @@ import AppKit
 import Combine
 import Foundation
 
+private struct AppSettingsEntry {
+    let relativePath: String
+    let isDirectory: Bool
+}
+
 @MainActor
 final class ProfileStore: ObservableObject {
     @Published private(set) var profiles: [CodexProfile] = []
@@ -10,13 +15,23 @@ final class ProfileStore: ObservableObject {
     @Published var newProfileName = ""
     @Published var includeConfig = true
     @Published var includeAuth = true
+    @Published var includeAppSettings = true
     @Published var relaunchCodexAfterSwitch = true
 
     private let fileManager = FileManager.default
     private let codexBundleIdentifier = "com.openai.codex"
+    private let appSettingsFolderName = "app-settings"
     private let codexURL: URL
     private let profilesURL: URL
     private let backupsURL: URL
+    private let appSettingsEntries = [
+        AppSettingsEntry(relativePath: "Library/Preferences/com.openai.codex.plist", isDirectory: false),
+        AppSettingsEntry(relativePath: "Library/Application Support/Codex/Preferences", isDirectory: false),
+        AppSettingsEntry(relativePath: "Library/Application Support/Codex/Local State", isDirectory: false),
+        AppSettingsEntry(relativePath: "Library/Application Support/Codex/Local Storage/leveldb", isDirectory: true),
+        AppSettingsEntry(relativePath: "Library/Application Support/Codex/Partitions/codex-browser-app/Preferences", isDirectory: false),
+        AppSettingsEntry(relativePath: "Library/Application Support/Codex/Partitions/codex-browser-app/Local Storage/leveldb", isDirectory: true)
+    ]
     private static let fileSizeFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
@@ -66,23 +81,41 @@ final class ProfileStore: ObservableObject {
     func switchToProfile(_ profile: CodexProfile) {
         do {
             try ensureDirectories()
+            let switchesAppSettings = profile.hasAppSettings
+            var closedCodexForAppSettings = false
+            if switchesAppSettings {
+                closedCodexForAppSettings = terminateCodex()
+            }
+
             let stamp = timestamp()
             let backupFolder = backupsURL.appendingPathComponent(stamp, isDirectory: true)
             try fileManager.createDirectory(at: backupFolder, withIntermediateDirectories: true)
 
-            try backupActiveFiles(to: backupFolder)
+            try backupActiveFiles(to: backupFolder, includeAppSettings: switchesAppSettings)
             try install(profile.configURL, to: configURL)
             try install(profile.authURL, to: authURL)
+            if let appSettingsURL = profile.appSettingsURL {
+                try installAppSettings(from: appSettingsURL)
+            }
 
             if relaunchCodexAfterSwitch {
                 do {
-                    try relaunchCodex()
-                    statusMessage = "Switched to \(profile.name) and relaunched Codex. Backup: \(backupFolder.lastPathComponent)"
+                    if switchesAppSettings {
+                        try openCodex()
+                    } else {
+                        try relaunchCodex()
+                    }
+                    let settingsText = switchesAppSettings ? " with app settings" : ""
+                    statusMessage = "Switched\(settingsText) to \(profile.name) and relaunched Codex. Backup: \(backupFolder.lastPathComponent)"
                 } catch {
                     statusMessage = "Switched to \(profile.name), but Codex relaunch failed: \(error.localizedDescription). Backup: \(backupFolder.lastPathComponent)"
                 }
             } else {
-                statusMessage = "Switched to \(profile.name). Backup: \(backupFolder.lastPathComponent)"
+                if closedCodexForAppSettings {
+                    statusMessage = "Switched to \(profile.name) and closed Codex so app settings could be restored. Backup: \(backupFolder.lastPathComponent)"
+                } else {
+                    statusMessage = "Switched to \(profile.name). Backup: \(backupFolder.lastPathComponent)"
+                }
             }
             refresh()
         } catch {
@@ -96,8 +129,8 @@ final class ProfileStore: ObservableObject {
             statusMessage = "Enter a profile name first."
             return
         }
-        guard includeConfig || includeAuth else {
-            statusMessage = "Choose config.toml, auth.json, or both."
+        guard includeConfig || includeAuth || includeAppSettings else {
+            statusMessage = "Choose config.toml, auth.json, app settings, or a combination."
             return
         }
 
@@ -114,8 +147,12 @@ final class ProfileStore: ObservableObject {
                 try copyIfExists(authURL, to: folder.appendingPathComponent("auth.json"))
             }
 
+            if includeAppSettings {
+                try saveCurrentAppSettings(to: folder)
+            }
+
             newProfileName = ""
-            statusMessage = "Saved current files as \(name)."
+            statusMessage = "Saved current setup as \(name)."
             refresh()
         } catch {
             statusMessage = "Save failed: \(error.localizedDescription)"
@@ -127,12 +164,19 @@ final class ProfileStore: ObservableObject {
     }
 
     func revealProfile(_ profile: CodexProfile) {
-        let url = profile.folderURL ?? profile.configURL ?? profile.authURL ?? codexURL
+        let url = profile.folderURL ?? profile.configURL ?? profile.authURL ?? profile.appSettingsURL ?? codexURL
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     private func relaunchCodex() throws {
+        terminateCodex()
+        try openCodex()
+    }
+
+    @discardableResult
+    private func terminateCodex() -> Bool {
         let runningCodexApps = NSRunningApplication.runningApplications(withBundleIdentifier: codexBundleIdentifier)
+        let hadRunningCodex = runningCodexApps.contains { !$0.isTerminated }
         for app in runningCodexApps where !app.isTerminated {
             _ = app.terminate()
         }
@@ -145,7 +189,7 @@ final class ProfileStore: ObservableObject {
         }
 
         waitForTermination(of: remainingCodexApps, timeout: 2)
-        try openCodex()
+        return hadRunningCodex
     }
 
     private func waitForTermination(of apps: [NSRunningApplication], timeout: TimeInterval) {
@@ -219,7 +263,8 @@ final class ProfileStore: ObservableObject {
 
                 let config = existingFile(folder.appendingPathComponent("config.toml"))
                 let auth = existingFile(folder.appendingPathComponent("auth.json"))
-                guard config != nil || auth != nil else { continue }
+                let appSettings = existingAppSettings(folder.appendingPathComponent(appSettingsFolderName, isDirectory: true))
+                guard config != nil || auth != nil || appSettings != nil else { continue }
 
                 let name = folder.lastPathComponent
                 seenNames.insert(name.lowercased())
@@ -229,6 +274,7 @@ final class ProfileStore: ObservableObject {
                     source: .folder,
                     configURL: config,
                     authURL: auth,
+                    appSettingsURL: appSettings,
                     folderURL: folder
                 ))
             }
@@ -268,6 +314,7 @@ final class ProfileStore: ObservableObject {
                     source: .looseFiles,
                     configURL: configs[key],
                     authURL: auths[key],
+                    appSettingsURL: nil,
                     folderURL: nil
                 )
             }
@@ -277,9 +324,16 @@ final class ProfileStore: ObservableObject {
         fileManager.fileExists(atPath: url.path) ? url : nil
     }
 
-    private func backupActiveFiles(to backupFolder: URL) throws {
+    private func existingAppSettings(_ url: URL) -> URL? {
+        hasAppSettings(in: url) ? url : nil
+    }
+
+    private func backupActiveFiles(to backupFolder: URL, includeAppSettings: Bool) throws {
         try copyIfExists(configURL, to: backupFolder.appendingPathComponent("config.toml"))
         try copyIfExists(authURL, to: backupFolder.appendingPathComponent("auth.json"))
+        if includeAppSettings {
+            try saveCurrentAppSettings(to: backupFolder)
+        }
     }
 
     private func install(_ source: URL?, to destination: URL) throws {
@@ -299,16 +353,57 @@ final class ProfileStore: ObservableObject {
     }
 
     private func copyReplacing(_ source: URL, to destination: URL) throws {
+        try fileManager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
         if fileManager.fileExists(atPath: destination.path) {
             try fileManager.removeItem(at: destination)
         }
         try fileManager.copyItem(at: source, to: destination)
     }
 
+    private func saveCurrentAppSettings(to folder: URL) throws {
+        let appSettingsFolder = folder.appendingPathComponent(appSettingsFolderName, isDirectory: true)
+        if fileManager.fileExists(atPath: appSettingsFolder.path) {
+            try fileManager.removeItem(at: appSettingsFolder)
+        }
+        try fileManager.createDirectory(at: appSettingsFolder, withIntermediateDirectories: true)
+
+        var copiedAtLeastOneItem = false
+        for entry in appSettingsEntries {
+            let source = appSettingsSourceURL(for: entry)
+            guard fileManager.fileExists(atPath: source.path) else { continue }
+            let destination = appSettingsFolder.appendingPathComponent(entry.relativePath)
+            try copyReplacing(source, to: destination)
+            copiedAtLeastOneItem = true
+        }
+
+        if !copiedAtLeastOneItem {
+            try? fileManager.removeItem(at: appSettingsFolder)
+            throw ProfileStoreError.appSettingsNotFound
+        }
+    }
+
+    private func installAppSettings(from appSettingsFolder: URL) throws {
+        for entry in appSettingsEntries {
+            let source = appSettingsFolder.appendingPathComponent(entry.relativePath)
+            guard fileManager.fileExists(atPath: source.path) else { continue }
+            try install(source, to: appSettingsSourceURL(for: entry))
+        }
+    }
+
+    private func hasAppSettings(in folder: URL) -> Bool {
+        appSettingsEntries.contains { entry in
+            fileManager.fileExists(atPath: folder.appendingPathComponent(entry.relativePath).path)
+        }
+    }
+
+    private func appSettingsSourceURL(for entry: AppSettingsEntry) -> URL {
+        fileManager.homeDirectoryForCurrentUser.appendingPathComponent(entry.relativePath, isDirectory: entry.isDirectory)
+    }
+
     private func activeFileSummary() -> String {
         let config = fileSummary(configURL)
         let auth = fileSummary(authURL)
-        return "config.toml: \(config) | auth.json: \(auth)"
+        return "config.toml: \(config) | auth.json: \(auth) | app settings: \(appSettingsSummary())"
     }
 
     private func fileSummary(_ url: URL) -> String {
@@ -327,6 +422,13 @@ final class ProfileStore: ObservableObject {
         return byteCount
     }
 
+    private func appSettingsSummary() -> String {
+        let count = appSettingsEntries.reduce(0) { result, entry in
+            fileManager.fileExists(atPath: appSettingsSourceURL(for: entry).path) ? result + 1 : result
+        }
+        return count == 0 ? "missing" : "\(count) items"
+    }
+
     private func timestamp() -> String {
         Self.backupTimestampFormatter.string(from: Date())
     }
@@ -341,6 +443,7 @@ final class ProfileStore: ObservableObject {
 
 private enum ProfileStoreError: LocalizedError {
     case codexLaunchFailed(status: Int32, message: String)
+    case appSettingsNotFound
 
     var errorDescription: String? {
         switch self {
@@ -350,6 +453,8 @@ private enum ProfileStoreError: LocalizedError {
             }
 
             return message
+        case .appSettingsNotFound:
+            return "Codex app settings were not found on this Mac."
         }
     }
 }

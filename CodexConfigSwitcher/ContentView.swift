@@ -108,6 +108,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Toggle("config.toml", isOn: $store.includeConfig)
                 Toggle("auth.json", isOn: $store.includeAuth)
+                Toggle("app settings", isOn: $store.includeAppSettings)
             }
             .toggleStyle(.checkbox)
             .font(.body)
@@ -189,6 +190,7 @@ struct ContentView: View {
                 HStack(spacing: 6) {
                     ProfileBadge(text: "config", systemImage: "doc.text", isActive: profile.hasConfig)
                     ProfileBadge(text: "auth", systemImage: "key", isActive: profile.hasAuth)
+                    ProfileBadge(text: "app", systemImage: "paintpalette", isActive: profile.hasAppSettings)
                 }
             }
 
@@ -212,6 +214,8 @@ struct ContentView: View {
                 FileRow(title: "config.toml", systemImage: "doc.text", url: profile.configURL)
                 Divider()
                 FileRow(title: "auth.json", systemImage: "key", url: profile.authURL)
+                Divider()
+                FileRow(title: "app settings", systemImage: "paintpalette", url: profile.appSettingsURL)
             }
         }
     }
@@ -337,6 +341,7 @@ private struct ProfileRow: View {
                 HStack(spacing: 7) {
                     AvailabilityDot(isActive: profile.hasConfig, label: "config")
                     AvailabilityDot(isActive: profile.hasAuth, label: "auth")
+                    AvailabilityDot(isActive: profile.hasAppSettings, label: "app")
                 }
             }
 
@@ -381,7 +386,7 @@ private struct InlineMetric: View {
             Text(value)
                 .font(.body)
                 .foregroundStyle(.secondary)
-                .lineLimit(2)
+                .lineLimit(3)
                 .textSelection(.enabled)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
