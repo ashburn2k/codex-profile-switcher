@@ -205,7 +205,19 @@ struct ContentView: View {
 
     private func fileSection(for profile: CodexProfile) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionTitle("Profile Files", systemImage: "tray.full")
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                SectionTitle("Profile Files", systemImage: "tray.full")
+
+                Spacer(minLength: 10)
+
+                Button {
+                    store.saveCurrentAppSettings(for: profile)
+                } label: {
+                    Label("Save App Settings", systemImage: "square.and.arrow.down")
+                }
+                .controlSize(.small)
+                .buttonBorderShape(.capsule)
+            }
 
             VStack(spacing: 4) {
                 FileRow(title: "config.toml", systemImage: "doc.text", url: profile.configURL)

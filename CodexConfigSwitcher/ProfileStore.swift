@@ -159,6 +159,22 @@ final class ProfileStore: ObservableObject {
         }
     }
 
+    func saveCurrentAppSettings(for profile: CodexProfile) {
+        do {
+            try ensureDirectories()
+            let folder = try writableFolder(for: profile)
+            try saveCurrentAppSettings(to: folder)
+            if profile.source == .looseFiles {
+                statusMessage = "Saved current app settings to \(profile.name) and converted loose files to a folder profile."
+            } else {
+                statusMessage = "Saved current app settings to \(profile.name)."
+            }
+            refresh()
+        } catch {
+            statusMessage = "App settings save failed: \(error.localizedDescription)"
+        }
+    }
+
     func revealCodexFolder() {
         NSWorkspace.shared.activateFileViewerSelecting([codexURL])
     }
@@ -328,6 +344,18 @@ final class ProfileStore: ObservableObject {
         hasAppSettings(in: url) ? url : nil
     }
 
+    private func writableFolder(for profile: CodexProfile) throws -> URL {
+        if let folderURL = profile.folderURL {
+            return folderURL
+        }
+
+        let folder = profilesURL.appendingPathComponent(sanitizedProfileName(profile.name), isDirectory: true)
+        try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+        try copyIfExists(profile.configURL, to: folder.appendingPathComponent("config.toml"))
+        try copyIfExists(profile.authURL, to: folder.appendingPathComponent("auth.json"))
+        return folder
+    }
+
     private func backupActiveFiles(to backupFolder: URL, includeAppSettings: Bool) throws {
         try copyIfExists(configURL, to: backupFolder.appendingPathComponent("config.toml"))
         try copyIfExists(authURL, to: backupFolder.appendingPathComponent("auth.json"))
@@ -350,6 +378,11 @@ final class ProfileStore: ObservableObject {
     private func copyIfExists(_ source: URL, to destination: URL) throws {
         guard fileManager.fileExists(atPath: source.path) else { return }
         try copyReplacing(source, to: destination)
+    }
+
+    private func copyIfExists(_ source: URL?, to destination: URL) throws {
+        guard let source else { return }
+        try copyIfExists(source, to: destination)
     }
 
     private func copyReplacing(_ source: URL, to destination: URL) throws {

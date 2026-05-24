@@ -25,7 +25,8 @@ opens Codex again so the newly copied profile is loaded on startup.
 
 You can also save the currently active Codex setup as a new named profile. New
 profiles are written to `~/.codex/profiles/<profile-name>/`, which keeps each
-environment's `config.toml` and `auth.json` together.
+environment's `config.toml` and `auth.json` together. To update only app
+preferences such as appearance, select a profile and use **Save App Settings**.
 
 ## What It Switches
 
