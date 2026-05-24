@@ -52,6 +52,8 @@ stop_app() {
 
 open_app() {
   /usr/bin/open -n "$APP_BUNDLE"
+  sleep 0.5
+  /usr/bin/osascript -e "tell application \"$APP_NAME\" to activate" >/dev/null 2>&1 || true
 }
 
 stop_app

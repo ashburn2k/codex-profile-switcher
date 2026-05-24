@@ -3,6 +3,7 @@ import SwiftUI
 
 @main
 struct CodexConfigSwitcherApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = ProfileStore()
 
     var body: some Scene {
@@ -24,6 +25,36 @@ struct CodexConfigSwitcherApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
         }
+    }
+}
+
+private final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+        DispatchQueue.main.async {
+            self.showAvailableWindows(for: NSApp)
+        }
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        guard !flag else { return true }
+        showAvailableWindows(for: sender)
+        return true
+    }
+
+    private func showAvailableWindows(for app: NSApplication) {
+        app.unhide(nil)
+        for window in app.windows {
+            if window.isMiniaturized {
+                window.deminiaturize(nil)
+            }
+            window.makeKeyAndOrderFront(nil)
+        }
+        app.activate(ignoringOtherApps: true)
     }
 }
 
@@ -54,6 +85,8 @@ private struct FixedWindowSize: NSViewRepresentable {
             window.styleMask.remove(.resizable)
             window.setContentSize(size)
             window.center()
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 
