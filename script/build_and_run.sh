@@ -14,6 +14,12 @@ APP_BUNDLE="$DERIVED_DATA_PATH/Build/Products/$CONFIGURATION/$APP_NAME.app"
 APP_BINARY="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 XCODEBUILD="/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild"
 
+clean_app_metadata() {
+  rm -rf "$APP_BUNDLE/Contents/_CodeSignature"
+  xattr -cr "$APP_BUNDLE" >/dev/null 2>&1 || true
+  find "$APP_BUNDLE" -exec xattr -d com.apple.FinderInfo {} \; >/dev/null 2>&1 || true
+}
+
 build_app() {
   cd "$ROOT_DIR"
 
@@ -33,8 +39,11 @@ build_app() {
     CODE_SIGNING_ALLOWED=NO \
     build
 
-  xattr -cr "$APP_BUNDLE"
-  /usr/bin/codesign --force --deep --sign - --timestamp=none "$APP_BUNDLE"
+  clean_app_metadata
+  if ! /usr/bin/codesign --force --deep --sign - --timestamp=none "$APP_BUNDLE"; then
+    clean_app_metadata
+    /usr/bin/codesign --force --deep --sign - --timestamp=none "$APP_BUNDLE"
+  fi
 }
 
 stop_app() {

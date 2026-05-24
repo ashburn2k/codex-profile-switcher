@@ -10,17 +10,17 @@ struct CodexConfigSwitcherApp: App {
             ContentView()
                 .environmentObject(store)
                 .frame(
-                    minWidth: 800,
-                    idealWidth: 800,
-                    maxWidth: 800,
-                    minHeight: 400,
-                    idealHeight: 400,
-                    maxHeight: 400
+                    minWidth: 820,
+                    idealWidth: 820,
+                    maxWidth: 820,
+                    minHeight: 460,
+                    idealHeight: 460,
+                    maxHeight: 460
                 )
-                .background(FixedWindowSize(size: NSSize(width: 800, height: 400)))
+                .background(FixedWindowSize(size: NSSize(width: 820, height: 460)))
         }
         .windowStyle(.titleBar)
-        .defaultSize(width: 800, height: 400)
+        .defaultSize(width: 820, height: 460)
         .commands {
             CommandGroup(replacing: .newItem) { }
         }

@@ -4,19 +4,12 @@ struct ContentView: View {
     @EnvironmentObject private var store: ProfileStore
     @State private var selectedProfile: CodexProfile?
 
-    private let sidebarWidth: CGFloat = 206
-    private let detailWidth: CGFloat = 558
-    private let panelHeight: CGFloat = 344
+    private let sidebarWidth: CGFloat = 216
+    private let detailWidth: CGFloat = 574
+    private let panelHeight: CGFloat = 404
 
     private var profileCountText: String {
         "\(store.profiles.count) profile\(store.profiles.count == 1 ? "" : "s")"
-    }
-
-    private var profileListHeight: CGFloat {
-        let headerAndPadding: CGFloat = 6
-        let rowHeight: CGFloat = 42
-        let count = CGFloat(min(max(store.profiles.count, 1), 6))
-        return headerAndPadding + rowHeight * count
     }
 
     var body: some View {
@@ -63,7 +56,7 @@ struct ContentView: View {
                 .padding(.bottom, 6)
 
             profileList
-                .frame(height: profileListHeight)
+                .frame(maxHeight: .infinity)
 
             Divider()
 
@@ -83,7 +76,6 @@ struct ContentView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(.clear)
-        .scrollDisabled(store.profiles.count <= 6)
     }
 
     private var sidebarFooter: some View {
@@ -135,37 +127,42 @@ struct ContentView: View {
     }
 
     private func detailPanel(for profile: CodexProfile) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            profileSummary(for: profile)
+        ScrollView(.vertical) {
+            VStack(alignment: .leading, spacing: 0) {
+                profileSummary(for: profile)
 
-            PanelDivider()
+                PanelDivider()
 
-            HStack(alignment: .top, spacing: 16) {
-                InlineMetric(
-                    title: "Active Files",
-                    value: store.activeSummary,
-                    systemImage: "checkmark.shield",
-                    tint: .green
-                )
+                HStack(alignment: .top, spacing: 16) {
+                    InlineMetric(
+                        title: "Active Files",
+                        value: store.activeSummary,
+                        systemImage: "checkmark.shield",
+                        tint: .green
+                    )
 
-                InlineMetric(
-                    title: "Profile Source",
-                    value: profile.source == .folder ? "Folder profile" : "Loose ~/.codex files",
-                    systemImage: profile.source == .folder ? "folder" : "doc.on.doc",
-                    tint: .blue
-                )
+                    InlineMetric(
+                        title: "Profile Source",
+                        value: profile.source == .folder ? "Folder profile" : "Loose ~/.codex files",
+                        systemImage: profile.source == .folder ? "folder" : "doc.on.doc",
+                        tint: .blue
+                    )
+                }
+
+                PanelDivider()
+
+                fileSection(for: profile)
+
+                PanelDivider()
+
+                switchSection(for: profile)
             }
-
-            PanelDivider()
-
-            fileSection(for: profile)
-
-            PanelDivider()
-
-            switchSection(for: profile)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, minHeight: panelHeight, alignment: .topLeading)
+        .scrollIndicators(.visible)
+        .frame(height: panelHeight, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .switcherGlassPanel(material: .regularMaterial, isInteractive: true)
         .shadow(color: Color.black.opacity(0.08), radius: 14, y: 5)
     }
@@ -258,7 +255,8 @@ struct ContentView: View {
             description: Text("Create a profile from your current Codex files or add folders under ~/.codex/profiles.")
         )
         .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(height: panelHeight)
+        .frame(maxWidth: .infinity)
         .switcherGlassPanel(material: .regularMaterial, isInteractive: false)
     }
 }
