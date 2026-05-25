@@ -20,6 +20,20 @@ clean_app_metadata() {
   find "$APP_BUNDLE" -exec xattr -d com.apple.FinderInfo {} \; >/dev/null 2>&1 || true
 }
 
+sign_app() {
+  if /usr/bin/codesign --force --deep --sign - --timestamp=none "$APP_BUNDLE"; then
+    return
+  fi
+
+  clean_app_metadata
+  if /usr/bin/codesign --force --deep --sign - --timestamp=none "$APP_BUNDLE"; then
+    return
+  fi
+
+  clean_app_metadata
+  echo "warning: codesign skipped; launching unsigned debug app" >&2
+}
+
 build_app() {
   cd "$ROOT_DIR"
 
@@ -40,10 +54,7 @@ build_app() {
     build
 
   clean_app_metadata
-  if ! /usr/bin/codesign --force --deep --sign - --timestamp=none "$APP_BUNDLE"; then
-    clean_app_metadata
-    /usr/bin/codesign --force --deep --sign - --timestamp=none "$APP_BUNDLE"
-  fi
+  sign_app
 }
 
 stop_app() {

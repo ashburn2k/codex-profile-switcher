@@ -10,17 +10,11 @@ struct CodexConfigSwitcherApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(store)
-                .frame(
-                    minWidth: 820,
-                    idealWidth: 820,
-                    maxWidth: 820,
-                    minHeight: 460,
-                    idealHeight: 460,
-                    maxHeight: 460
-                )
+                .frame(width: 820, height: 460)
                 .background(FixedWindowSize(size: NSSize(width: 820, height: 460)))
         }
         .windowStyle(.titleBar)
+        .windowResizability(.contentSize)
         .defaultSize(width: 820, height: 460)
         .commands {
             CommandGroup(replacing: .newItem) { }
@@ -77,20 +71,19 @@ private struct FixedWindowSize: NSViewRepresentable {
 
     private func scheduleApply(from view: NSView, coordinator: Coordinator) {
         DispatchQueue.main.async {
-            guard !coordinator.didApply, let window = view.window else { return }
-            coordinator.didApply = true
-            let lockedFrameSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: size)).size
-            window.minSize = lockedFrameSize
-            window.maxSize = lockedFrameSize
+            guard let window = view.window else { return }
+            window.contentMinSize = size
+            window.contentMaxSize = size
             window.styleMask.remove(.resizable)
             window.setContentSize(size)
-            window.center()
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            if !coordinator.didCenter {
+                coordinator.didCenter = true
+                window.center()
+            }
         }
     }
 
     final class Coordinator {
-        var didApply = false
+        var didCenter = false
     }
 }
